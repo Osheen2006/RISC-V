@@ -87,6 +87,11 @@ The processor follows a single-cycle architecture where each instruction is fetc
                        │ Register File│
                        └─────────────┘
 ```
+![Instruction and Control Signals](images/waveform1.png)
+
+![Register File and ALU](images/waveform2.png)
+
+![Data Memory Operations](images/waveform3.png)
 
 ### FPGA Implementation
 Verilog RTL
