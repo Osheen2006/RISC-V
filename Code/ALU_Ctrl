@@ -1,0 +1,37 @@
+module alu_control (
+    input wire [1:0] ALUOp,
+    input wire [2:0] funct3,
+    input wire [6:0] funct7,
+    output reg [3:0] alu_control_signal
+);
+
+always @(*) begin
+    case (ALUOp)
+
+        2'b00: begin
+            // lw, sw, addi
+            alu_control_signal = 4'b0010; // ADD
+        end
+
+        2'b01: begin
+            // beq
+            alu_control_signal = 4'b0110; // SUB
+        end
+
+        2'b10: begin
+            // R-type
+            case ({funct7, funct3})
+                {7'b0000000, 3'b000}: alu_control_signal = 4'b0010; // ADD
+                {7'b0100000, 3'b000}: alu_control_signal = 4'b0110; // SUB
+                default: alu_control_signal = 4'b0000;
+            endcase
+        end
+
+        default: begin
+            alu_control_signal = 4'b0000;
+        end
+
+    endcase
+end
+
+endmodule
