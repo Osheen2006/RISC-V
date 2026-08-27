@@ -1,0 +1,116 @@
+module single_cycle_cpu (
+    input wire clk,
+    input wire reset
+);
+
+wire [31:0] pc_current;
+wire [31:0] pc_next;
+wire [31:0] pc_plus4;
+wire [31:0] branch_target;
+
+wire [31:0] instruction;
+
+wire [6:0] opcode;
+wire [4:0] rd;
+wire [2:0] funct3;
+wire [4:0] rs1;
+wire [4:0] rs2;
+wire [6:0] funct7;
+
+wire RegWrite;
+wire ALUSrc;
+wire MemRead;
+wire MemWrite;
+wire MemToReg;
+wire Branch;
+wire [1:0] ALUOp;
+
+wire [31:0] read_data1;
+wire [31:0] read_data2;
+wire [31:0] imm_out;
+wire [31:0] alu_input2;
+wire [3:0] alu_control_signal;
+wire [31:0] alu_result;
+wire zero;
+wire [31:0] mem_read_data;
+wire [31:0] write_back_data;
+
+assign opcode = instruction[6:0];
+assign rd     = instruction[11:7];
+assign funct3 = instruction[14:12];
+assign rs1    = instruction[19:15];
+assign rs2    = instruction[24:20];
+assign funct7 = instruction[31:25];
+
+assign pc_plus4 = pc_current + 32'd4;
+assign branch_target = pc_current + imm_out;
+assign pc_next = (Branch && zero) ? branch_target : pc_plus4;
+
+pc PC_UNIT (
+    .clk(clk),
+    .reset(reset),
+    .next_pc(pc_next),
+    .pc_out(pc_current)
+);
+
+instr_mem IMEM (
+    .addr(pc_current),
+    .instruction(instruction)
+);
+
+cu CU (
+    .opcode(opcode),
+    .RegWrite(RegWrite),
+    .ALUSrc(ALUSrc),
+    .MemRead(MemRead),
+    .MemWrite(MemWrite),
+    .MemToReg(MemToReg),
+    .Branch(Branch),
+    .ALUOp(ALUOp)
+);
+
+register RF (
+    .clk(clk),
+    .RegWrite(RegWrite),
+    .rs1(rs1),
+    .rs2(rs2),
+    .rd(rd),
+    .write_data(write_back_data),
+    .read_data1(read_data1),
+    .read_data2(read_data2)
+);
+
+imm_gen IMM (
+    .instruction(instruction),
+    .imm_out(imm_out)
+);
+
+assign alu_input2 = ALUSrc ? imm_out : read_data2;
+
+alu_control ALUCTRL (
+    .ALUOp(ALUOp),
+    .funct3(funct3),
+    .funct7(funct7),
+    .alu_control_signal(alu_control_signal)
+);
+
+alu ALU_UNIT (
+    .a(read_data1),
+    .b(alu_input2),
+    .alu_control(alu_control_signal),
+    .result(alu_result),
+    .zero(zero)
+);
+
+data_mem DMEM (
+    .clk(clk),
+    .MemRead(MemRead),
+    .MemWrite(MemWrite),
+    .addr(alu_result),
+    .write_data(read_data2),
+    .read_data(mem_read_data)
+);
+
+assign write_back_data = MemToReg ? mem_read_data : alu_result;
+
+endmodule
